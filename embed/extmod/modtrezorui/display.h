@@ -1,8 +1,20 @@
 /*
- * Copyright (c) Pavol Rusnak, SatoshiLabs
+ * This file is part of the TREZOR project, https://trezor.io/
  *
- * Licensed under TREZOR License
- * see LICENSE file for details
+ * Copyright (c) SatoshiLabs
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __DISPLAY_H__
@@ -42,7 +54,7 @@
 
 void display_init(void);
 void display_refresh(void);
-void display_save(const char *filename);
+void display_save(const char *prefix);
 
 // provided by common
 
@@ -69,7 +81,7 @@ int display_text_width(const char *text, int textlen, uint8_t font);
 void display_qrcode(int x, int y, const char *data, int datalen, uint8_t scale);
 void display_loader(uint16_t progress, int yoffset, uint16_t fgcolor, uint16_t bgcolor, const uint8_t *icon, uint32_t iconlen, uint16_t iconfgcolor);
 
-int *display_offset(int xy[2]);
+void display_offset(int set_xy[2], int *get_x, int *get_y);
 int display_orientation(int degrees);
 int display_backlight(int val);
 void display_fade(int start, int end, int delay);

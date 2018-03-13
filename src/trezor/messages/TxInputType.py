@@ -16,3 +16,29 @@ class TxInputType(p.MessageType):
         9: ('decred_tree', p.UVarintType, 0),
         10: ('decred_script_version', p.UVarintType, 0),
     }
+
+    def __init__(
+        self,
+        address_n: list = None,
+        prev_hash: bytes = None,
+        prev_index: int = None,
+        script_sig: bytes = None,
+        sequence: int = None,
+        script_type: int = None,
+        multisig: MultisigRedeemScriptType = None,
+        amount: int = None,
+        decred_tree: int = None,
+        decred_script_version: int = None,
+        **kwargs,
+    ):
+        self.address_n = [] if address_n is None else address_n
+        self.prev_hash = prev_hash
+        self.prev_index = prev_index
+        self.script_sig = script_sig
+        self.sequence = sequence
+        self.script_type = script_type
+        self.multisig = multisig
+        self.amount = amount
+        self.decred_tree = decred_tree
+        self.decred_script_version = decred_script_version
+        p.MessageType.__init__(self, **kwargs)

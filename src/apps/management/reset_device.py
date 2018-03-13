@@ -1,19 +1,18 @@
 from micropython import const
-from ubinascii import hexlify
-
 from trezor import config, ui, wire
 from trezor.crypto import bip39, hashlib, random
 from trezor.messages import ButtonRequestType, FailureType, wire_types
 from trezor.messages.ButtonRequest import ButtonRequest
 from trezor.messages.EntropyRequest import EntropyRequest
 from trezor.messages.Success import Success
+from trezor import workflow
 from trezor.pin import pin_to_int
 from trezor.ui.confirm import HoldToConfirmDialog
-from trezor.ui.keyboard import MnemonicKeyboard
+from trezor.ui.mnemonic import MnemonicKeyboard
 from trezor.ui.scroll import Scrollpage, animate_swipe, paginate
 from trezor.ui.text import Text
-from trezor.utils import chunks
-
+from trezor.utils import chunks, format_ordinal
+from ubinascii import hexlify
 from apps.common import storage
 from apps.common.confirm import require_confirm
 from apps.management.change_pin import request_pin_confirm
@@ -23,7 +22,6 @@ if __debug__:
     current_word = None
 
 
-@ui.layout
 async def reset_device(ctx, msg):
     if __debug__:
         global internal_entropy
@@ -80,7 +78,11 @@ async def reset_device(ctx, msg):
         mnemonic=mnemonic, needs_backup=msg.skip_backup)
 
     # show success message
-    await show_success(ctx)
+    if not msg.skip_backup:
+        await show_success(ctx)
+    else:
+        # trigger reload of homescreen
+        workflow.restartdefault()
 
     return Success(message='Initialized')
 
@@ -113,7 +115,7 @@ async def show_warning(ctx):
 
 async def show_wrong_entry(ctx):
     content = Text(
-        'Wrong entry!', ui.ICON_CLEAR,
+        'Wrong entry!', ui.ICON_WRONG,
         'You have entered',
         'wrong seed word.',
         'Please check again.', icon_color=ui.RED)
@@ -157,7 +159,8 @@ async def show_mnemonic(ctx, mnemonic: str):
     words_per_page = const(4)
     words = list(enumerate(mnemonic.split()))
     pages = list(chunks(words, words_per_page))
-    await paginate(show_mnemonic_page, len(pages), first_page, pages)
+    paginator = paginate(show_mnemonic_page, len(pages), first_page, pages)
+    await ctx.wait(paginator)
 
 
 @ui.layout
@@ -165,7 +168,6 @@ async def show_mnemonic_page(page: int, page_count: int, pages: list):
     lines = ['%2d. %s' % (wi + 1, word) for wi, word in pages[page]]
     content = Text('Recovery seed', ui.ICON_RESET, ui.MONO, *lines)
     content = Scrollpage(content, page, page_count)
-    ui.display.clear()
 
     if page + 1 == page_count:
         await HoldToConfirmDialog(content)
@@ -174,13 +176,24 @@ async def show_mnemonic_page(page: int, page_count: int, pages: list):
         await animate_swipe()
 
 
-@ui.layout
 async def check_mnemonic(ctx, mnemonic: str) -> bool:
     words = mnemonic.split()
-    index = random.uniform(len(words) // 2)  # first half
-    result = await MnemonicKeyboard('Type %s. word' % (index + 1))
-    if result != words[index]:
+
+    # check a word from the first half
+    index = random.uniform(len(words) // 2)
+    if not await check_word(ctx, words, index):
         return False
-    index = len(words) // 2 + random.uniform(len(words) // 2)  # second half
-    result = await MnemonicKeyboard('Type %s. word' % (index + 1))
+
+    # check a word from the second half
+    index = random.uniform(len(words) // 2) + len(words) // 2
+    if not await check_word(ctx, words, index):
+        return False
+
+    return True
+
+
+@ui.layout
+async def check_word(ctx, words: list, index: int):
+    keyboard = MnemonicKeyboard('Type the %s word:' % format_ordinal(index + 1))
+    result = await ctx.wait(keyboard)
     return result == words[index]

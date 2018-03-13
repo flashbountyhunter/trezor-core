@@ -1,8 +1,20 @@
 /*
- * Copyright (c) Pavol Rusnak, SatoshiLabs
+ * This file is part of the TREZOR project, https://trezor.io/
  *
- * Licensed under TREZOR License
- * see LICENSE file for details
+ * Copyright (c) SatoshiLabs
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "sdcard.h"
@@ -21,7 +33,7 @@ STATIC mp_obj_t mod_trezorio_SDCard_make_new(const mp_obj_type_t *type, size_t n
     mp_arg_check_num(n_args, n_kw, 0, 0, false);
     mp_obj_SDCard_t *o = m_new_obj(mp_obj_SDCard_t);
     o->base.type = type;
-#if defined TREZOR_UNIX
+#if defined TREZOR_MODEL_EMU
     sdcard_init();
 #endif
     return MP_OBJ_FROM_PTR(o);

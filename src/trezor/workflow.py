@@ -1,25 +1,19 @@
-from trezor import log
 from trezor import loop
-from trezor import ui
 
-started = []
+workflows = []
+layouts = []
 default = None
-default_handler = None
+default_layout = None
 
 
 def onstart(w):
-    closedefault()
-    started.append(w)
-    ui.display.backlight(ui.BACKLIGHT_NORMAL)
-    log.debug(__name__, 'onstart: %s', w)
+    workflows.append(w)
 
 
 def onclose(w):
-    started.remove(w)
-    log.debug(__name__, 'onclose: %s', w)
-
-    if not started and default_handler:
-        startdefault(default_handler)
+    workflows.remove(w)
+    if not layouts and default_layout:
+        startdefault(default_layout)
 
 
 def closedefault():
@@ -28,16 +22,30 @@ def closedefault():
     if default:
         loop.close(default)
         default = None
-        log.debug(__name__, 'closedefault')
 
 
-def startdefault(handler):
+def startdefault(layout):
     global default
-    global default_handler
+    global default_layout
 
     if not default:
-        default_handler = handler
-        default = handler()
+        default_layout = layout
+        default = layout()
         loop.schedule(default)
-        ui.display.backlight(ui.BACKLIGHT_NORMAL)
-        log.debug(__name__, 'startdefault')
+
+
+def restartdefault():
+    global default_layout
+    d = default_layout
+    closedefault()
+    startdefault(d)
+
+
+def onlayoutstart(l):
+    closedefault()
+    layouts.append(l)
+
+
+def onlayoutclose(l):
+    if l in layouts:
+        layouts.remove(l)

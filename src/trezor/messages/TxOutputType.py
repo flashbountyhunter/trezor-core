@@ -13,3 +13,23 @@ class TxOutputType(p.MessageType):
         6: ('op_return_data', p.BytesType, 0),
         7: ('decred_script_version', p.UVarintType, 0),
     }
+
+    def __init__(
+        self,
+        address: str = None,
+        address_n: list = None,
+        amount: int = None,
+        script_type: int = None,
+        multisig: MultisigRedeemScriptType = None,
+        op_return_data: bytes = None,
+        decred_script_version: int = None,
+        **kwargs,
+    ):
+        self.address = address
+        self.address_n = [] if address_n is None else address_n
+        self.amount = amount
+        self.script_type = script_type
+        self.multisig = multisig
+        self.op_return_data = op_return_data
+        self.decred_script_version = decred_script_version
+        p.MessageType.__init__(self, **kwargs)

@@ -2,7 +2,7 @@
 Extremely minimal streaming codec for a subset of protobuf.  Supports uint32,
 bytes, string, embedded message and repeated fields.
 
-For de-sererializing (loading) protobuf types, object with `AsyncReader`
+For de-serializing (loading) protobuf types, object with `AsyncReader`
 interface is required:
 
 >>> class AsyncReader:
@@ -223,8 +223,9 @@ async def dump_message(writer, msg):
                 await writer.awrite(svalue)
 
             elif ftype is UnicodeType:
-                await dump_uvarint(writer, len(svalue))
-                await writer.awrite(bytes(svalue, 'utf8'))
+                bvalue = bytes(svalue, 'utf8')
+                await dump_uvarint(writer, len(bvalue))
+                await writer.awrite(bvalue)
 
             elif issubclass(ftype, MessageType):
                 counter = CountingWriter()

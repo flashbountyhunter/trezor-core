@@ -12,3 +12,21 @@ class SignTx(p.MessageType):
         6: ('decred_expiry', p.UVarintType, 0),
     }
     MESSAGE_WIRE_TYPE = 15
+
+    def __init__(
+        self,
+        outputs_count: int = None,
+        inputs_count: int = None,
+        coin_name: str = None,
+        version: int = None,
+        lock_time: int = None,
+        decred_expiry: int = None,
+        **kwargs,
+    ):
+        self.outputs_count = outputs_count
+        self.inputs_count = inputs_count
+        self.coin_name = coin_name
+        self.version = version
+        self.lock_time = lock_time
+        self.decred_expiry = decred_expiry
+        p.MessageType.__init__(self, **kwargs)

@@ -6,7 +6,6 @@ from trezor import messages
 from trezor import workflow
 
 from . import codec_v1
-from . import codec_v2
 
 workflow_handlers = {}
 
@@ -20,9 +19,7 @@ def register(mtype, handler, *args):
 
 def setup(iface):
     '''Initialize the wire stack on passed USB interface.'''
-    session_supervisor = codec_v2.SesssionSupervisor(iface, session_handler)
-    session_supervisor.open(codec_v1.SESSION_ID)
-    loop.schedule(session_supervisor.listen())
+    loop.schedule(session_handler(iface, codec_v1.SESSION_ID))
 
 
 class Context:
@@ -80,17 +77,19 @@ class Context:
         await protobuf.dump_message(writer, msg)
         await writer.aclose()
 
+    def wait(self, *tasks):
+        '''
+        Wait until one of the passed tasks finishes, and return the result,
+        while servicing the wire context.  If a message comes until one of the
+        tasks ends, `UnexpectedMessageError` is raised.
+        '''
+        return loop.wait(self.read(()), *tasks)
+
     def getreader(self):
-        if self.sid == codec_v1.SESSION_ID:
-            return codec_v1.Reader(self.iface)
-        else:
-            return codec_v2.Reader(self.iface, self.sid)
+        return codec_v1.Reader(self.iface)
 
     def getwriter(self):
-        if self.sid == codec_v1.SESSION_ID:
-            return codec_v1.Writer(self.iface)
-        else:
-            return codec_v2.Writer(self.iface, self.sid)
+        return codec_v1.Writer(self.iface)
 
 
 class UnexpectedMessageError(Exception):

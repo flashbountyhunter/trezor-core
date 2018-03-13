@@ -6,25 +6,26 @@ from trezor.messages.wire_types import \
     SignTx, \
     SignMessage, VerifyMessage, \
     SignIdentity, \
+    GetECDHSessionKey, \
     CipherKeyValue
 
 
 @unimport
 def dispatch_GetPublicKey(*args, **kwargs):
-    from .get_public_key import layout_get_public_key
-    return layout_get_public_key(*args, **kwargs)
+    from .get_public_key import get_public_key
+    return get_public_key(*args, **kwargs)
 
 
 @unimport
 def dispatch_GetAddress(*args, **kwargs):
-    from .get_address import layout_get_address
-    return layout_get_address(*args, **kwargs)
+    from .get_address import get_address
+    return get_address(*args, **kwargs)
 
 
 @unimport
 def dispatch_GetEntropy(*args, **kwargs):
-    from .get_entropy import layout_get_entropy
-    return layout_get_entropy(*args, **kwargs)
+    from .get_entropy import get_entropy
+    return get_entropy(*args, **kwargs)
 
 
 @unimport
@@ -35,26 +36,32 @@ def dispatch_SignTx(*args, **kwargs):
 
 @unimport
 def dispatch_SignMessage(*args, **kwargs):
-    from .sign_message import layout_sign_message
-    return layout_sign_message(*args, **kwargs)
+    from .sign_message import sign_message
+    return sign_message(*args, **kwargs)
 
 
 @unimport
 def dispatch_VerifyMessage(*args, **kwargs):
-    from .verify_message import layout_verify_message
-    return layout_verify_message(*args, **kwargs)
+    from .verify_message import verify_message
+    return verify_message(*args, **kwargs)
 
 
 @unimport
 def dispatch_SignIdentity(*args, **kwargs):
-    from .sign_identity import layout_sign_identity
-    return layout_sign_identity(*args, **kwargs)
+    from .sign_identity import sign_identity
+    return sign_identity(*args, **kwargs)
+
+
+@unimport
+def dispatch_GetECDHSessionKey(*args, **kwargs):
+    from .ecdh import get_ecdh_session_key
+    return get_ecdh_session_key(*args, **kwargs)
 
 
 @unimport
 def dispatch_CipherKeyValue(*args, **kwargs):
-    from .cipher_key_value import layout_cipher_key_value
-    return layout_cipher_key_value(*args, **kwargs)
+    from .cipher_key_value import cipher_key_value
+    return cipher_key_value(*args, **kwargs)
 
 
 def boot():
@@ -65,4 +72,5 @@ def boot():
     register(SignMessage, protobuf_workflow, dispatch_SignMessage)
     register(VerifyMessage, protobuf_workflow, dispatch_VerifyMessage)
     register(SignIdentity, protobuf_workflow, dispatch_SignIdentity)
+    register(GetECDHSessionKey, protobuf_workflow, dispatch_GetECDHSessionKey)
     register(CipherKeyValue, protobuf_workflow, dispatch_CipherKeyValue)

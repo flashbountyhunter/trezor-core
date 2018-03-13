@@ -1,8 +1,20 @@
 /*
- * Copyright (c) Jan Pochyla, SatoshiLabs
+ * This file is part of the TREZOR project, https://trezor.io/
  *
- * Licensed under TREZOR License
- * see LICENSE file for details
+ * Copyright (c) SatoshiLabs
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "py/objstr.h"
@@ -62,21 +74,21 @@ STATIC mp_obj_t mod_trezorcrypto_HDNode_make_new(const mp_obj_type_t *type, size
     mp_get_buffer_raise(vals[5].u_obj, &public_key, MP_BUFFER_READ);
     mp_get_buffer_raise(vals[6].u_obj, &curve_name, MP_BUFFER_READ);
 
-    if (NULL == chain_code.buf || 32 != chain_code.len) {
+    if (32 != chain_code.len) {
         mp_raise_ValueError("chain_code is invalid");
     }
-    if (NULL == public_key.buf && NULL == private_key.buf) {
+    if (0 == public_key.len && 0 == private_key.len) {
         mp_raise_ValueError("either public_key or private_key is required");
     }
-    if (NULL != private_key.buf && 32 != private_key.len) {
+    if (0 != private_key.len && 32 != private_key.len) {
         mp_raise_ValueError("private_key is invalid");
     }
-    if (NULL != public_key.buf && 33 != public_key.len) {
+    if (0 != public_key.len && 33 != public_key.len) {
         mp_raise_ValueError("public_key is invalid");
     }
 
     const curve_info *curve = NULL;
-    if (NULL == curve_name.buf) {
+    if (0 == curve_name.len) {
         curve = get_curve_by_name(SECP256K1_NAME);
     } else {
         curve = get_curve_by_name(curve_name.buf);
@@ -91,17 +103,17 @@ STATIC mp_obj_t mod_trezorcrypto_HDNode_make_new(const mp_obj_type_t *type, size
     o->fingerprint = fingerprint;
     o->hdnode.depth = depth;
     o->hdnode.child_num = child_num;
-    if (NULL != chain_code.buf && 32 == chain_code.len) {
+    if (32 == chain_code.len) {
         memcpy(o->hdnode.chain_code, chain_code.buf, 32);
     } else {
         memzero(o->hdnode.chain_code, 32);
     }
-    if (NULL != private_key.buf && 32 == private_key.len) {
+    if (32 == private_key.len) {
         memcpy(o->hdnode.private_key, private_key.buf, 32);
     } else {
         memzero(o->hdnode.private_key, 32);
     }
-    if (NULL != public_key.buf && 33 == public_key.len) {
+    if (33 == public_key.len) {
         memcpy(o->hdnode.public_key, public_key.buf, 33);
     } else {
         memzero(o->hdnode.public_key, 33);
@@ -111,16 +123,27 @@ STATIC mp_obj_t mod_trezorcrypto_HDNode_make_new(const mp_obj_type_t *type, size
     return MP_OBJ_FROM_PTR(o);
 }
 
-/// def derive(self, index: int) -> None:
+/// def derive(self, index: int, public: bool=False) -> None:
 ///     '''
 ///     Derive a BIP0032 child node in place.
 ///     '''
-STATIC mp_obj_t mod_trezorcrypto_HDNode_derive(mp_obj_t self, mp_obj_t index) {
-    mp_obj_HDNode_t *o = MP_OBJ_TO_PTR(self);
-    uint32_t i = mp_obj_get_int_truncated(index);
+STATIC mp_obj_t mod_trezorcrypto_HDNode_derive(size_t n_args, const mp_obj_t *args) {
+    mp_obj_HDNode_t *o = MP_OBJ_TO_PTR(args[0]);
+    uint32_t i = mp_obj_get_int_truncated(args[1]);
     uint32_t fp = hdnode_fingerprint(&o->hdnode);
+    bool public = n_args > 2 && args[2] == mp_const_true;
 
-    if (!hdnode_private_ckd(&o->hdnode, i)) {
+    int res;
+    if (public) {
+        res = hdnode_public_ckd(&o->hdnode, i);
+    } else {
+        if (0 == memcmp(o->hdnode.private_key, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 32)) {
+            memzero(&o->hdnode, sizeof(o->hdnode));
+            mp_raise_ValueError("Failed to derive, private key not set");
+        }
+        res = hdnode_private_ckd(&o->hdnode, i);
+    }
+    if (!res) {
         memzero(&o->hdnode, sizeof(o->hdnode));
         mp_raise_ValueError("Failed to derive");
     }
@@ -128,7 +151,7 @@ STATIC mp_obj_t mod_trezorcrypto_HDNode_derive(mp_obj_t self, mp_obj_t index) {
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(mod_trezorcrypto_HDNode_derive_obj, mod_trezorcrypto_HDNode_derive);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mod_trezorcrypto_HDNode_derive_obj, 2, 3, mod_trezorcrypto_HDNode_derive);
 
 /// def derive_path(self, path: List[int]) -> None:
 ///     '''

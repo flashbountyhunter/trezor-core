@@ -1,8 +1,20 @@
 /*
- * Copyright (c) Pavol Rusnak, SatoshiLabs
+ * This file is part of the TREZOR project, https://trezor.io/
  *
- * Licensed under TREZOR License
- * see LICENSE file for details
+ * Copyright (c) SatoshiLabs
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <stdlib.h>
@@ -10,11 +22,20 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 
-#define DISPLAY_BORDER 16
+#define DISPLAY_EMULATOR_BORDER 16
+
+#define DISPLAY_TOUCH_OFFSET_X 180
+#define DISPLAY_TOUCH_OFFSET_Y 120
+
+#define WINDOW_WIDTH 600
+#define WINDOW_HEIGHT 800
 
 static SDL_Renderer *RENDERER;
 static SDL_Surface *BUFFER;
-static SDL_Texture *TEXTURE;
+static SDL_Texture *TEXTURE, *BACKGROUND;
+
+int sdl_display_res_x = DISPLAY_RESX, sdl_display_res_y = DISPLAY_RESX;
+int sdl_touch_offset_x, sdl_touch_offset_y;
 
 static struct {
     struct {
@@ -53,7 +74,7 @@ void display_init(void)
         ensure(secfalse, "SDL_Init error");
     }
     atexit(SDL_Quit);
-    SDL_Window *win = SDL_CreateWindow("TREZOR", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, DISPLAY_RESX + 2 * DISPLAY_BORDER, DISPLAY_RESY + 2 * DISPLAY_BORDER, SDL_WINDOW_SHOWN);
+    SDL_Window *win = SDL_CreateWindow("TREZOR Emulator", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
     if (!win) {
         printf("%s\n", SDL_GetError());
         ensure(secfalse, "SDL_CreateWindow error");
@@ -64,13 +85,22 @@ void display_init(void)
         SDL_DestroyWindow(win);
         ensure(secfalse, "SDL_CreateRenderer error");
     }
-    SDL_SetRenderDrawColor(RENDERER, DISPLAY_BACKLIGHT, DISPLAY_BACKLIGHT, DISPLAY_BACKLIGHT, 255);
+    SDL_SetRenderDrawColor(RENDERER, 0, 0, 0, 255);
     SDL_RenderClear(RENDERER);
     BUFFER = SDL_CreateRGBSurface(0, MAX_DISPLAY_RESX, MAX_DISPLAY_RESY, 16, 0xF800, 0x07E0, 0x001F, 0x0000);
     TEXTURE = SDL_CreateTexture(RENDERER, SDL_PIXELFORMAT_RGB565, SDL_TEXTUREACCESS_STREAMING, DISPLAY_RESX, DISPLAY_RESY);
-    SDL_SetTextureBlendMode(TEXTURE, SDL_BLENDMODE_NONE);
-    SDL_SetTextureAlphaMod(TEXTURE, 0);
-
+    SDL_SetTextureBlendMode(TEXTURE, SDL_BLENDMODE_BLEND);
+    // TODO: find better way how to embed/distribute background image
+    BACKGROUND = IMG_LoadTexture(RENDERER, "../embed/unix/background.jpg");
+    if (BACKGROUND) {
+        SDL_SetTextureBlendMode(BACKGROUND, SDL_BLENDMODE_NONE);
+        sdl_touch_offset_x = DISPLAY_TOUCH_OFFSET_X;
+        sdl_touch_offset_y = DISPLAY_TOUCH_OFFSET_Y;
+    } else {
+        SDL_SetWindowSize(win, DISPLAY_RESX + 2 * DISPLAY_EMULATOR_BORDER, DISPLAY_RESY + 2 * DISPLAY_EMULATOR_BORDER);
+        sdl_touch_offset_x = DISPLAY_EMULATOR_BORDER;
+        sdl_touch_offset_y = DISPLAY_EMULATOR_BORDER;
+    }
     DISPLAY_BACKLIGHT = 0;
     DISPLAY_ORIENTATION = 0;
 #endif
@@ -94,34 +124,45 @@ void display_refresh(void)
     if (!RENDERER) {
         display_init();
     }
-    SDL_RenderClear(RENDERER);
+    if (BACKGROUND) {
+        SDL_RenderCopy(RENDERER, BACKGROUND, NULL, NULL);
+    } else {
+        SDL_RenderClear(RENDERER);
+    }
     SDL_UpdateTexture(TEXTURE, NULL, BUFFER->pixels, BUFFER->pitch);
-    const SDL_Rect r = {DISPLAY_BORDER, DISPLAY_BORDER, DISPLAY_RESX, DISPLAY_RESY};
-    SDL_RenderCopyEx(RENDERER, TEXTURE, NULL, &r, DISPLAY_ORIENTATION, NULL, 0);
+#define BACKLIGHT_NORMAL 150
+    SDL_SetTextureAlphaMod(TEXTURE, MIN(255, 255 * DISPLAY_BACKLIGHT / BACKLIGHT_NORMAL));
+    if (BACKGROUND) {
+        const SDL_Rect r = {DISPLAY_TOUCH_OFFSET_X, DISPLAY_TOUCH_OFFSET_Y, DISPLAY_RESX, DISPLAY_RESY};
+        SDL_RenderCopyEx(RENDERER, TEXTURE, NULL, &r, DISPLAY_ORIENTATION, NULL, 0);
+    } else {
+        const SDL_Rect r = {DISPLAY_EMULATOR_BORDER, DISPLAY_EMULATOR_BORDER, DISPLAY_RESX, DISPLAY_RESY};
+        SDL_RenderCopyEx(RENDERER, TEXTURE, NULL, &r, DISPLAY_ORIENTATION, NULL, 0);
+    }
     SDL_RenderPresent(RENDERER);
 #endif
 }
 
 static void display_set_orientation(int degrees)
 {
+    display_refresh();
 }
 
 static void display_set_backlight(int val)
 {
-#ifndef TREZOR_NOUI
-    if (!RENDERER) {
-        display_init();
-    }
-    SDL_SetRenderDrawColor(RENDERER, val, val, val, 255);
-#endif
+    display_refresh();
 }
 
-void display_save(const char *filename)
+void display_save(const char *prefix)
 {
 #ifndef TREZOR_NOUI
     if (!RENDERER) {
         display_init();
     }
-    IMG_SavePNG(BUFFER, filename);
+    static uint32_t cnt = 0;
+    char fname[256];
+    snprintf(fname, sizeof(fname), "%s%08d.png", prefix, cnt);
+    IMG_SavePNG(BUFFER, fname);
+    cnt++;
 #endif
 }

@@ -1,8 +1,8 @@
 from micropython import const
 from trezor import io, loop, ui, res
 from trezor.ui import display
-from trezor.ui.button import BTN_CLICKED, ICON, Button
-from trezor.ui.swipe import SWIPE_HORIZONTAL, SWIPE_LEFT, SWIPE_RIGHT, Swipe
+from trezor.ui.button import BTN_CLICKED, Button
+from trezor.ui.swipe import SWIPE_HORIZONTAL, SWIPE_LEFT, Swipe
 
 SPACE = res.load(ui.ICON_SPACE)
 
@@ -10,7 +10,7 @@ KEYBOARD_KEYS = (
     ('1', '2', '3', '4', '5', '6', '7', '8', '9', '0'),
     (SPACE, 'abc', 'def', 'ghi', 'jkl', 'mno', 'pqrs', 'tuv', 'wxyz', '*#'),
     (SPACE, 'ABC', 'DEF', 'GHI', 'JKL', 'MNO', 'PQRS', 'TUV', 'WXYZ', '*#'),
-    ('_', '.', '/', '!', '+', '-', '?', ',', ';', '$'))
+    ('_<>', '.:@', '/|\\', '!()', '+%&', '-[]', '?{}', ',\'`', ';"~', '$^='))
 
 
 def digit_area(i):
@@ -79,12 +79,27 @@ class Input(Button):
             display.bar(tx + width + 1, ty - 18, 2, 22, fg_color)
 
 
+class Prompt:
+    def __init__(self, text):
+        self.text = text
+        self.dirty = True
+
+    def taint(self):
+        self.dirty = True
+
+    def render(self):
+        if self.dirty:
+            display.bar(0, 0, ui.WIDTH, 48, ui.BG)
+            display.text_center(ui.WIDTH // 2, 32, self.text, ui.BOLD, ui.GREY, ui.BG)
+            self.dirty = False
+
+
 CANCELLED = const(0)
 
 
 class PassphraseKeyboard(ui.Widget):
     def __init__(self, prompt, page=1):
-        self.prompt = prompt
+        self.prompt = Prompt(prompt)
         self.page = page
         self.input = Input(ui.grid(0, n_x=1, n_y=6), '')
         self.back = Button(ui.grid(12), res.load(ui.ICON_BACK), style=ui.BTN_CLEAR)
@@ -98,8 +113,7 @@ class PassphraseKeyboard(ui.Widget):
         if self.input.content:
             self.input.render()
         else:
-            display.bar(0, 0, 240, 48, ui.BG)
-            display.text_center(ui.SCREEN // 2, 32, self.prompt, ui.BOLD, ui.GREY, ui.BG)
+            self.prompt.render()
         render_scrollbar(self.page)
         # buttons
         self.back.render()
@@ -149,6 +163,7 @@ class PassphraseKeyboard(ui.Widget):
             self.back.enable()
         else:
             self.back.disable()
+            self.prompt.taint()
 
     async def __iter__(self):
         self.edit(self.input.content)  # init button state
@@ -189,3 +204,7 @@ class PassphraseKeyboard(ui.Widget):
         else:
             self.page = (self.page - 1) % len(KEYBOARD_KEYS)
         self.keys = key_buttons(KEYBOARD_KEYS[self.page])
+        self.back.taint()
+        self.done.taint()
+        self.input.taint()
+        self.prompt.taint()

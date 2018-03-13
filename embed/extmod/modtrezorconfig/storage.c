@@ -1,8 +1,20 @@
 /*
- * Copyright (c) Pavol Rusnak, Jan Pochyla, SatoshiLabs
+ * This file is part of the TREZOR project, https://trezor.io/
  *
- * Licensed under TREZOR License
- * see LICENSE file for details
+ * Copyright (c) SatoshiLabs
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <string.h>
@@ -119,7 +131,7 @@ static secbool pin_get_fails(const uint32_t **pinfail, uint32_t *pofs)
     return sectrue;
 }
 
-static secbool pin_check(uint32_t pin, mp_obj_t callback)
+secbool storage_check_pin(uint32_t pin, mp_obj_t callback)
 {
     const uint32_t *pinfail = NULL;
     uint32_t ofs;
@@ -136,11 +148,23 @@ static secbool pin_check(uint32_t pin, mp_obj_t callback)
     pin_fails_check_max(ctr);
 
     // Sleep for ~ctr seconds before checking the PIN.
+    uint32_t progress;
     for (uint32_t wait = ~ctr; wait > 0; wait--) {
-        if (mp_obj_is_callable(callback)) {
-            mp_call_function_2(callback, mp_obj_new_int(wait), mp_obj_new_int(~ctr));
+        for (int i = 0; i < 10; i++) {
+            if (mp_obj_is_callable(callback)) {
+                if ((~ctr) > 1000000) {  // precise enough
+                    progress = (~ctr - wait) / ((~ctr) / 1000);
+                } else {
+                    progress = ((~ctr - wait) * 10 + i) * 100 / (~ctr);
+                }
+                mp_call_function_2(callback, mp_obj_new_int(wait), mp_obj_new_int(progress));
+            }
+            hal_delay(100);
         }
-        hal_delay(1000);
+    }
+    // Show last frame if we were waiting
+    if ((~ctr > 0) && mp_obj_is_callable(callback)) {
+        mp_call_function_2(callback, mp_obj_new_int(0), mp_obj_new_int(1000));
     }
 
     // First, we increase PIN fail counter in storage, even before checking the
@@ -161,7 +185,7 @@ static secbool pin_check(uint32_t pin, mp_obj_t callback)
 secbool storage_unlock(const uint32_t pin, mp_obj_t callback)
 {
     unlocked = secfalse;
-    if (sectrue == initialized && sectrue == pin_check(pin, callback)) {
+    if (sectrue == initialized && sectrue == storage_check_pin(pin, callback)) {
         unlocked = sectrue;
     }
     return unlocked;
@@ -204,7 +228,7 @@ secbool storage_change_pin(const uint32_t pin, const uint32_t newpin, mp_obj_t c
     if (sectrue != initialized || sectrue != unlocked) {
         return secfalse;
     }
-    if (sectrue != pin_check(pin, callback)) {
+    if (sectrue != storage_check_pin(pin, callback)) {
         return secfalse;
     }
     return norcow_set(PIN_KEY, &newpin, sizeof(uint32_t));

@@ -93,7 +93,7 @@ class MnemonicKeyboard(ui.Widget):
             self.back.render()
         else:
             # prompt
-            display.bar(0, 8, 240, 60, ui.BG)
+            display.bar(0, 8, ui.WIDTH, 60, ui.BG)
             display.text(20, 40, self.prompt, ui.BOLD, ui.GREY, ui.BG)
         # key buttons
         for btn in self.keys:
@@ -110,7 +110,7 @@ class MnemonicKeyboard(ui.Widget):
 
         if self.input.touch(event, pos) == BTN_CLICKED:
             # input press, either auto-complete or confirm
-            if content == word:
+            if word and content == word:
                 self.edit('')
                 return content
             else:

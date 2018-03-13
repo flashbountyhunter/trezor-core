@@ -1,3 +1,22 @@
+/*
+ * This file is part of the TREZOR project, https://trezor.io/
+ *
+ * Copyright (c) SatoshiLabs
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -17,16 +36,22 @@
 #include "common.h"
 #include "display.h"
 #include "flash.h"
+#include "mpu.h"
 #include "rng.h"
 #include "sdcard.h"
 #include "touch.h"
 
 int main(void)
 {
+    // Enable MPU
+    mpu_config();
+
     // Init peripherals
     pendsv_init();
     sdcard_init();
     touch_init();
+
+    display_clear();
 
     printf("CORE: Preparing stack\n");
     // Stack limit should be less than real stack size, so we have a chance

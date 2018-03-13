@@ -8,7 +8,7 @@ from trezor.messages.TxOutputType import TxOutputType
 from trezor.messages.TxRequest import TxRequest
 from trezor.messages.TxAck import TxAck
 from trezor.messages.TransactionType import TransactionType
-from trezor.messages.RequestType import TXINPUT, TXOUTPUT, TXMETA, TXFINISHED
+from trezor.messages.RequestType import TXINPUT, TXOUTPUT, TXFINISHED
 from trezor.messages.TxRequestDetailsType import TxRequestDetailsType
 from trezor.messages.TxRequestSerializedType import TxRequestSerializedType
 from trezor.messages import InputScriptType
@@ -42,13 +42,15 @@ class TestSignSegwitTxP2WPKHInP2SH(unittest.TestCase):
             address='mhRx1CeVfaayqRwq5zgRQmD7W5aWBfD5mC',
             amount=12300000,
             script_type=OutputScriptType.PAYTOADDRESS,
-            address_n=None,
+            address_n=[],
+            multisig=None,
         )
         out2 = TxOutputType(
             address='2N1LGaGg836mqSQqiuUBLfcyGBhyZbremDX',
             script_type=OutputScriptType.PAYTOADDRESS,
             amount=123456789 - 11000 - 12300000,
-            address_n=None,
+            address_n=[],
+            multisig=None,
         )
         tx = SignTx(coin_name='Testnet', version=None, lock_time=None, inputs_count=1, outputs_count=2)
 
@@ -135,13 +137,15 @@ class TestSignSegwitTxP2WPKHInP2SH(unittest.TestCase):
             address='mhRx1CeVfaayqRwq5zgRQmD7W5aWBfD5mC',
             amount=12300000,
             script_type=OutputScriptType.PAYTOADDRESS,
-            address_n=None,
+            address_n=[],
+            multisig=None,
         )
         out2 = TxOutputType(
             address_n=[49 | 0x80000000, 1 | 0x80000000, 0 | 0x80000000, 1, 0],
             script_type=OutputScriptType.PAYTOP2SHWITNESS,
             amount=123456789 - 11000 - 12300000,
-            address=None,  # TODO: ask about sanitizing
+            address=None,
+            multisig=None,
         )
         tx = SignTx(coin_name='Testnet', version=None, lock_time=None, inputs_count=1, outputs_count=2)
 
@@ -248,13 +252,15 @@ class TestSignSegwitTxP2WPKHInP2SH(unittest.TestCase):
             address='mhRx1CeVfaayqRwq5zgRQmD7W5aWBfD5mC',
             amount=8,
             script_type=OutputScriptType.PAYTOADDRESS,
-            address_n=None,
+            address_n=[],
+            multisig=None,
         )
         out2 = TxOutputType(
             address_n=[49 | 0x80000000, 1 | 0x80000000, 0 | 0x80000000, 1, 0],
             script_type=OutputScriptType.PAYTOP2SHWITNESS,
             amount=1,
             address=None,
+            multisig=None,
         )
         tx = SignTx(coin_name='Testnet', version=None, lock_time=None, inputs_count=1, outputs_count=2)
 

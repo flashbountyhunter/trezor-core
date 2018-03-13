@@ -7,3 +7,11 @@ class Initialize(p.MessageType):
         1: ('state', p.BytesType, 0),
     }
     MESSAGE_WIRE_TYPE = 0
+
+    def __init__(
+        self,
+        state: bytes = None,
+        **kwargs,
+    ):
+        self.state = state
+        p.MessageType.__init__(self, **kwargs)

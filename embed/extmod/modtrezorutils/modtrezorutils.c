@@ -1,11 +1,25 @@
 /*
- * Copyright (c) Jan Pochyla, SatoshiLabs
+ * This file is part of the TREZOR project, https://trezor.io/
  *
- * Licensed under TREZOR License
- * see LICENSE file for details
+ * Copyright (c) SatoshiLabs
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "py/runtime.h"
+
+#include "version.h"
 
 #if MICROPY_PY_TREZORUTILS
 
@@ -94,11 +108,67 @@ STATIC mp_obj_t mod_trezorutils_halt(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mod_trezorutils_halt_obj, 0, 1, mod_trezorutils_halt);
 
+/// def set_mode_unprivileged() -> None:
+///     '''
+///     Set unprivileged mode.
+///     '''
+STATIC mp_obj_t mod_trezorutils_set_mode_unprivileged(void) {
+#if defined TREZOR_MODEL_T
+    __asm__ volatile("msr control, %0" :: "r" (0x1));
+    __asm__ volatile("isb");
+#endif
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(mod_trezorutils_set_mode_unprivileged_obj, mod_trezorutils_set_mode_unprivileged);
+
+/// def symbol(name: str) -> str/int/None:
+///     '''
+///     Retrieve internal symbol.
+///     '''
+STATIC mp_obj_t mod_trezorutils_symbol(mp_obj_t name) {
+    mp_buffer_info_t str;
+    mp_get_buffer_raise(name, &str, MP_BUFFER_READ);
+    if (0 == strncmp(str.buf, "GITREV", str.len)) {
+#define XSTR(s) STR(s)
+#define STR(s) #s
+        return mp_obj_new_str(XSTR(GITREV), strlen(XSTR(GITREV)), false);
+    }
+    if (0 == strncmp(str.buf, "VERSION_MAJOR", str.len)) {
+        return mp_obj_new_int(VERSION_MAJOR);
+    }
+    if (0 == strncmp(str.buf, "VERSION_MINOR", str.len)) {
+        return mp_obj_new_int(VERSION_MINOR);
+    }
+    if (0 == strncmp(str.buf, "VERSION_PATCH", str.len)) {
+        return mp_obj_new_int(VERSION_PATCH);
+    }
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(mod_trezorutils_symbol_obj, mod_trezorutils_symbol);
+
+/// def model() -> str:
+///     '''
+///     Return which hardware model we are running on.
+///     '''
+STATIC mp_obj_t mod_trezorutils_model(void) {
+    const char *model = NULL;
+#if defined TREZOR_MODEL_T
+    model = "T";
+#elif defined TREZOR_MODEL_EMU
+    model = "EMU";
+#endif
+    return model ? mp_obj_new_str(model, strlen(model), false) : mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(mod_trezorutils_model_obj, mod_trezorutils_model);
+
 STATIC const mp_rom_map_elem_t mp_module_trezorutils_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_trezorutils) },
     { MP_ROM_QSTR(MP_QSTR_consteq), MP_ROM_PTR(&mod_trezorutils_consteq_obj) },
     { MP_ROM_QSTR(MP_QSTR_memcpy), MP_ROM_PTR(&mod_trezorutils_memcpy_obj) },
     { MP_ROM_QSTR(MP_QSTR_halt), MP_ROM_PTR(&mod_trezorutils_halt_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_mode_unprivileged), MP_ROM_PTR(&mod_trezorutils_set_mode_unprivileged_obj) },
+    { MP_ROM_QSTR(MP_QSTR_symbol), MP_ROM_PTR(&mod_trezorutils_symbol_obj) },
+    { MP_ROM_QSTR(MP_QSTR_model), MP_ROM_PTR(&mod_trezorutils_model_obj) },
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_module_trezorutils_globals, mp_module_trezorutils_globals_table);

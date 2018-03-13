@@ -7,3 +7,11 @@ class PassphraseRequest(p.MessageType):
         1: ('on_device', p.BoolType, 0),
     }
     MESSAGE_WIRE_TYPE = 41
+
+    def __init__(
+        self,
+        on_device: bool = None,
+        **kwargs,
+    ):
+        self.on_device = on_device
+        p.MessageType.__init__(self, **kwargs)

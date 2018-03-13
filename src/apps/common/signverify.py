@@ -1,7 +1,8 @@
-from micropython import const
+from trezor import ui
 from trezor.crypto.hashlib import sha256
-from trezor.utils import chunks
-from apps.common.hash_writer import HashWriter
+from trezor.ui.text import TEXT_MARGIN_LEFT
+from trezor.utils import HashWriter, chunks, split_words
+from ubinascii import hexlify
 from apps.wallet.sign_tx.signing import write_varint
 
 
@@ -15,12 +16,14 @@ def message_digest(coin, message):
 
 
 def split_message(message):
-    chars_per_line = const(18)
-    message = stringify_message(message)
-    lines = chunks(message, chars_per_line)
+
+    def measure(s):
+        return ui.display.text_width(s, ui.NORMAL)
+
+    try:
+        m = bytes(message).decode()
+        lines = split_words(m, ui.WIDTH - 2 * TEXT_MARGIN_LEFT, metric=measure)
+    except UnicodeError:
+        m = hexlify(message)
+        lines = chunks(m, 16)
     return lines
-
-
-def stringify_message(message):
-    # TODO: account for invalid UTF-8 sequences
-    return str(message, 'utf-8')

@@ -1,6 +1,5 @@
 from micropython import const
 
-import sys
 import math
 import utime
 
@@ -9,11 +8,13 @@ from trezorui import Display
 from trezor import io
 from trezor import loop
 from trezor import res
+from trezor import workflow
+from trezor.utils import model
 
 display = Display()
 
 # for desktop platforms, we need to refresh the display after each frame
-if sys.platform != 'trezor':
+if model() == 'EMU':
     loop.after_step_hook = display.refresh
 
 # import constants from modtrezorui
@@ -22,7 +23,8 @@ SIZE = Display.FONT_SIZE
 NORMAL = Display.FONT_NORMAL
 BOLD = Display.FONT_BOLD
 MONO = Display.FONT_MONO
-SCREEN = Display.WIDTH  # used also for height as we have square display
+WIDTH = Display.WIDTH
+HEIGHT = Display.HEIGHT
 
 
 def lerpi(a: int, b: int, t: float) -> int:
@@ -55,11 +57,11 @@ def rotate(pos: tuple) -> tuple:
         return pos
     x, y = pos
     if r == 90:
-        return (y, 240 - x)
+        return (y, WIDTH - x)
     if r == 180:
-        return (240 - x, 240 - y)
+        return (WIDTH - x, HEIGHT - y)
     if r == 270:
-        return (240 - y, x)
+        return (HEIGHT - y, x)
 
 
 def pulse(delay: int):
@@ -95,7 +97,7 @@ async def click() -> tuple:
     return pos
 
 
-async def backlight_slide(val: int, delay: int=20000, step: int=1):
+async def backlight_slide(val: int, delay: int=35000, step: int=20):
     sleep = loop.sleep(delay)
     current = display.backlight()
     for i in range(current, val, -step if current > val else step):
@@ -104,34 +106,34 @@ async def backlight_slide(val: int, delay: int=20000, step: int=1):
 
 
 def layout(f):
-    delay = const(35000)  # 35ms
-    step = const(20)
-
     async def inner(*args, **kwargs):
-        await backlight_slide(BACKLIGHT_DIM, delay, step)
-        slide = backlight_slide(BACKLIGHT_NORMAL, delay, step)
+        await backlight_slide(BACKLIGHT_DIM)
+        slide = backlight_slide(BACKLIGHT_NORMAL)
         try:
+            layout = f(*args, **kwargs)
+            workflow.onlayoutstart(layout)
             loop.schedule(slide)
-            return await f(*args, **kwargs)
+            display.clear()
+            return await layout
         finally:
             loop.close(slide)
+            workflow.onlayoutclose(layout)
 
     return inner
 
 
 def header(title: str,
-           icon: bytes=ICON_RESET,
-           fg: int=BG,
+           icon: bytes=ICON_DEFAULT,
+           fg: int=FG,
            bg: int=BG,
-           ifg: int=BG):
+           ifg: int=GREEN):
     if icon is not None:
-        display.icon(14, 17, res.load(icon), ifg, bg)
+        display.icon(14, 15, res.load(icon), ifg, bg)
     display.text(44, 35, title, BOLD, fg, bg)
 
 
 VIEWX = const(6)
 VIEWY = const(9)
-VIEW = const(228)  # SCREEN - 2 * VIEWX
 
 
 def grid(i: int,
@@ -139,8 +141,8 @@ def grid(i: int,
          n_y: int=5,
          start_x: int=VIEWX,
          start_y: int=VIEWY,
-         end_x: int=(VIEWX + VIEW),
-         end_y: int=(VIEWY + VIEW),
+         end_x: int=(WIDTH - VIEWX),
+         end_y: int=(HEIGHT - VIEWY),
          cells_x: int=1,
          cells_y: int=1,
          spacing: int=0):

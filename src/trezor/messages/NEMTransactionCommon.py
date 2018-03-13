@@ -11,3 +11,21 @@ class NEMTransactionCommon(p.MessageType):
         5: ('deadline', p.UVarintType, 0),
         6: ('signer', p.BytesType, 0),
     }
+
+    def __init__(
+        self,
+        address_n: list = None,
+        network: int = None,
+        timestamp: int = None,
+        fee: int = None,
+        deadline: int = None,
+        signer: bytes = None,
+        **kwargs,
+    ):
+        self.address_n = [] if address_n is None else address_n
+        self.network = network
+        self.timestamp = timestamp
+        self.fee = fee
+        self.deadline = deadline
+        self.signer = signer
+        p.MessageType.__init__(self, **kwargs)

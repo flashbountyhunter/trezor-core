@@ -1,8 +1,20 @@
 /*
- * Copyright (c) Pavol Rusnak, SatoshiLabs
+ * This file is part of the TREZOR project, https://trezor.io/
  *
- * Licensed under TREZOR License
- * see LICENSE file for details
+ * Copyright (c) SatoshiLabs
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "inflate.h"
@@ -377,7 +389,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mod_trezorui_Display_backlight_obj, 1
 ///     Call without the xy parameter to just perform the read of the value.
 ///     '''
 STATIC mp_obj_t mod_trezorui_Display_offset(size_t n_args, const mp_obj_t *args) {
-    int xy[2], *ret;
+    int xy[2], x, y;
     if (n_args > 1) {
         size_t xy_cnt;
         mp_obj_t *xy_obj;
@@ -391,27 +403,26 @@ STATIC mp_obj_t mod_trezorui_Display_offset(size_t n_args, const mp_obj_t *args)
         }
         xy[0] = mp_obj_get_int(xy_obj[0]);
         xy[1] = mp_obj_get_int(xy_obj[1]);
-        ret = display_offset(xy);
+        display_offset(xy, &x, &y);
     } else {
-        ret = display_offset(0);
+        display_offset(0, &x, &y);
     }
     mp_obj_tuple_t *tuple = MP_OBJ_TO_PTR(mp_obj_new_tuple(2, NULL));
-    tuple->items[0] = MP_OBJ_NEW_SMALL_INT(ret[0]);
-    tuple->items[1] = MP_OBJ_NEW_SMALL_INT(ret[1]);
+    tuple->items[0] = MP_OBJ_NEW_SMALL_INT(x);
+    tuple->items[1] = MP_OBJ_NEW_SMALL_INT(y);
     return MP_OBJ_FROM_PTR(tuple);
-
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mod_trezorui_Display_offset_obj, 1, 2, mod_trezorui_Display_offset);
 
-/// def save(self, filename: str) -> None:
+/// def save(self, prefix: str) -> None:
 ///     '''
-///     Saves current display contents to file filename.
+///     Saves current display contents to PNG file with given prefix.
 ///     '''
-STATIC mp_obj_t mod_trezorui_Display_save(mp_obj_t self, mp_obj_t filename) {
-    mp_buffer_info_t fn;
-    mp_get_buffer_raise(filename, &fn, MP_BUFFER_READ);
-    if (fn.len > 0) {
-        display_save(fn.buf);
+STATIC mp_obj_t mod_trezorui_Display_save(mp_obj_t self, mp_obj_t prefix) {
+    mp_buffer_info_t pfx;
+    mp_get_buffer_raise(prefix, &pfx, MP_BUFFER_READ);
+    if (pfx.len > 0) {
+        display_save(pfx.buf);
     }
     return mp_const_none;
 }

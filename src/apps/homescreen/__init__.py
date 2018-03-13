@@ -1,72 +1,67 @@
 from trezor import config
+from trezor.utils import unimport, symbol, model
 from trezor.wire import register, protobuf_workflow
-from trezor.utils import unimport
-from trezor.messages.wire_types import Initialize, GetFeatures, Ping, ClearSession
+from trezor.messages import wire_types
+from trezor.messages.Features import Features
+from trezor.messages.Success import Success
+
+from apps.common import storage, coins, cache
 
 
-@unimport
 async def respond_Features(ctx, msg):
-    from apps.common import storage, coins, cache
-    from trezor.messages.Features import Features
 
     if msg.__qualname__ == 'Initialize':
-        if msg.state is None or msg.state != cache.get_state():
+        if msg.state is None or bytes(msg.state) != cache.get_state(state=bytes(msg.state)):
             cache.clear()
 
     f = Features()
     f.vendor = 'trezor.io'
-    f.revision = '0123456789'
-    f.bootloader_hash = '0123456789'
-    f.major_version = 2
-    f.minor_version = 0
-    f.patch_version = 0
-    f.model = 'T'
-    f.coins = coins.COINS
-
+    f.major_version = symbol('VERSION_MAJOR')
+    f.minor_version = symbol('VERSION_MINOR')
+    f.patch_version = symbol('VERSION_PATCH')
     f.device_id = storage.get_device_id()
-    f.label = storage.get_label()
-    f.initialized = storage.is_initialized()
-    f.passphrase_protection = storage.has_passphrase()
     f.pin_protection = config.has_pin()
-    f.flags = storage.get_flags()
+    f.passphrase_protection = storage.has_passphrase()
     f.language = 'english'
-
-    f.state = cache.get_state()
+    f.label = storage.get_label()
+    f.coins = coins.COINS
+    f.initialized = storage.is_initialized()
+    f.revision = symbol('GITREV')
+    f.pin_cached = config.has_pin()
+    f.passphrase_cached = cache.has_passphrase()
+    f.needs_backup = storage.needs_backup()
+    f.flags = storage.get_flags()
+    if model() in ['T', 'EMU']:  # emulator currently emulates model T
+        f.model = 'T'
+    f.unfinished_backup = storage.unfinished_backup()
 
     return f
 
 
+async def respond_ClearSession(ctx, msg):
+    cache.clear()
+    return Success(message='Session cleared')
+
+
 @unimport
 async def respond_Pong(ctx, msg):
-    from trezor.messages.Success import Success
-
-    s = Success()
-    s.message = msg.message
 
     if msg.button_protection:
         from apps.common.confirm import require_confirm
         from trezor.messages.ButtonRequestType import ProtectCall
         from trezor.ui.text import Text
         from trezor import ui
-        await require_confirm(ctx, Text('Confirm', ui.ICON_RESET), ProtectCall)
+        await require_confirm(ctx, Text('Confirm', ui.ICON_DEFAULT), ProtectCall)
 
     if msg.passphrase_protection:
         from apps.common.request_passphrase import protect_by_passphrase
         await protect_by_passphrase(ctx)
 
-    return s
-
-
-@unimport
-async def respond_ClearSession(ctx, msg):
-    from apps.common import cache
-    from trezor.messages.Success import Success
-    cache.clear()
-    return Success(message='Session cleared')
+    return Success(message=msg.message)
 
 
 def boot():
-    register(Initialize, protobuf_workflow, respond_Features)
-    register(GetFeatures, protobuf_workflow, respond_Features)
-    register(Ping, protobuf_workflow, respond_Pong)
-    register(ClearSession, protobuf_workflow, respond_ClearSession)
+    register(wire_types.Initialize, protobuf_workflow, respond_Features)
+    register(wire_types.GetFeatures, protobuf_workflow, respond_Features)
+    register(wire_types.ClearSession, protobuf_workflow, respond_ClearSession)
+    register(wire_types.Ping, protobuf_workflow, respond_Pong)

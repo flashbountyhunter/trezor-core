@@ -8,3 +8,13 @@ class CosiCommit(p.MessageType):
         2: ('data', p.BytesType, 0),
     }
     MESSAGE_WIRE_TYPE = 71
+
+    def __init__(
+        self,
+        address_n: list = None,
+        data: bytes = None,
+        **kwargs,
+    ):
+        self.address_n = [] if address_n is None else address_n
+        self.data = data
+        p.MessageType.__init__(self, **kwargs)

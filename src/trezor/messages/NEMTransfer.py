@@ -11,3 +11,19 @@ class NEMTransfer(p.MessageType):
         4: ('public_key', p.BytesType, 0),
         5: ('mosaics', NEMMosaic, p.FLAG_REPEATED),
     }
+
+    def __init__(
+        self,
+        recipient: str = None,
+        amount: int = None,
+        payload: bytes = None,
+        public_key: bytes = None,
+        mosaics: list = None,
+        **kwargs,
+    ):
+        self.recipient = recipient
+        self.amount = amount
+        self.payload = payload
+        self.public_key = public_key
+        self.mosaics = [] if mosaics is None else mosaics
+        p.MessageType.__init__(self, **kwargs)

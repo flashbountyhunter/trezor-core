@@ -1,8 +1,9 @@
-import boot
+import boot  # noqa: F401
 
 from trezor import io
 from trezor import log
 from trezor import loop
+from trezor import utils
 from trezor import wire
 from trezor import workflow
 
@@ -99,9 +100,11 @@ if __debug__:
     wire.setup(usb_debug)
 usb.open()
 
+utils.set_mode_unprivileged()
+
 # load default homescreen
-from apps.homescreen.homescreen import layout_homescreen
+from apps.homescreen.homescreen import homescreen
 
 # run main even loop and specify which screen is default
-workflow.startdefault(layout_homescreen)
+workflow.startdefault(homescreen)
 loop.run()

@@ -8,3 +8,13 @@ class HDNodePathType(p.MessageType):
         1: ('node', HDNodeType, 0),  # required
         2: ('address_n', p.UVarintType, p.FLAG_REPEATED),
     }
+
+    def __init__(
+        self,
+        node: HDNodeType = None,
+        address_n: list = None,
+        **kwargs,
+    ):
+        self.node = node
+        self.address_n = [] if address_n is None else address_n
+        p.MessageType.__init__(self, **kwargs)
